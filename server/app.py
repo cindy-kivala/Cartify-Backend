@@ -7,11 +7,7 @@ from server.config import Config
 def create_app():
     app = Flask(__name__)
 
-    # app.config.from_mapping(
-    #     SQLALCHEMY_DATABASE_URI="sqlite:///cartify.db",
-    #     SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    #     SECRET_KEY="cartandshop"  # Replace with a secure key in production
-    # )
+   
     app.config.from_object(Config)
 
 #binding the db and migrate to the app
@@ -22,14 +18,14 @@ def create_app():
     from server.models import Product, User, Order, CartItem, OrderItem
 
 #Register blueprints
-    # from server.routes.users import users_bp
-    # from server.routes.cart import cart_bp
-    # from server.routes.products import products_bp
-    # from server.routes.orders import orders_bp
+    from server.routes.users import users_bp
+    from server.routes.cart import cart_bp
+    from server.routes.products import products_bp
+    from server.routes.orders import orders_bp
 
-    # app.register_blueprint(users_bp, url_prefix="/users")
-    # app.register_blueprint(cart_bp, url_prefix="/cart")
-    # app.register_blueprint(products_bp, url_prefix="/products")
-    # app.register_blueprint(orders_bp, url_prefix="/orders")
+    app.register_blueprint(users_bp, url_prefix="/users")
+    app.register_blueprint(cart_bp, url_prefix="/cart")
+    app.register_blueprint(products_bp, url_prefix="/products")
+    app.register_blueprint(orders_bp, url_prefix="/orders")
 
     return app
