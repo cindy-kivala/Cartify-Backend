@@ -1,8 +1,10 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
 from datetime import datetime
+from flask_bcrypt import Bcrypt
 
 db = SQLAlchemy()
+bcrypt = Bcrypt()
 
 
 class Product(db.Model):
@@ -20,18 +22,28 @@ class Product(db.Model):
         return value
 
 
-
 class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String, unique=True, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
+    _password_hash = db.Column("password_hash", db.String, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     orders = db.relationship("Order", backref="user", lazy=True)
     cart_items = db.relationship("CartItem", backref="user", lazy=True)
 
+    @property
+    def password(self):
+        raise AttributeError("Password is write-only.")
+
+    @password.setter
+    def password(self, plaintext_password):
+        self._password_hash = bcrypt.generate_password_hash(plaintext_password).decode("utf-8")
+
+    def check_password(self, plaintext_password):
+        return bcrypt.check_password_hash(self._password_hash, plaintext_password)
 
 
 class Order(db.Model):
@@ -44,7 +56,6 @@ class Order(db.Model):
     items = db.relationship("OrderItem", backref="order", lazy=True)
 
 
-
 class OrderItem(db.Model):
     __tablename__ = "order_items"
 
@@ -54,7 +65,6 @@ class OrderItem(db.Model):
     quantity = db.Column(db.Integer, default=1)
 
     product = db.relationship("Product")
-
 
 
 class CartItem(db.Model):
