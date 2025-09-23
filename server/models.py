@@ -66,3 +66,4 @@ class CartItem(db.Model):
     quantity = db.Column(db.Integer, default=1)
 
     product = db.relationship("Product")
+
