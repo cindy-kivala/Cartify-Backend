@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_migrate import Migrate
-from server.models import db, Product, Order
+from flask_restful import Api, Resource
+from server.models import db, Product, User, Order, OrderItem, CartItem as CartItemModel
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///store.db"
@@ -8,82 +9,174 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 migrate = Migrate(app, db)
+api = Api(app)
 
 
+# 1. Products
+class ProductList(Resource):
+    def get(self):
+        products = Product.query.all()
+        return [p.to_dict() for p in products], 200
 
-@app.route("/products", methods=["GET"])
-def get_products():
-    products = Product.query.all()
-    return jsonify([{"id": p.id, "name": p.name, "price": p.price} for p in products])
+    def post(self):
+        data = request.get_json() or {}
+        if not data.get("name") or not data.get("price"):
+            return {"error": "Missing required fields: 'name' and 'price'"}, 400
 
-@app.route("/products/<int:id>", methods=["GET"])
-def get_product(id):
-    product = Product.query.get_or_404(id)
-    return jsonify({"id": product.id, "name": product.name, "price": product.price})
+        try:
+            product = Product(name=data["name"], price=data["price"])
+            db.session.add(product)
+            db.session.commit()
+            return product.to_dict(), 201
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 400
 
-@app.route("/products", methods=["POST"])
-def create_product():
-    data = request.json
-    try:
-        new_product = Product(name=data["name"], price=data["price"])
-        db.session.add(new_product)
+
+class ProductResource(Resource):
+    def get(self, id):
+        product = Product.query.get_or_404(id)
+        return product.to_dict(), 200
+
+    def patch(self, id):
+        product = Product.query.get_or_404(id)
+        data = request.get_json() or {}
+        if "name" in data:
+            product.name = data["name"]
+        if "price" in data:
+            product.price = data["price"]
         db.session.commit()
-        return jsonify({"id": new_product.id, "name": new_product.name, "price": new_product.price}), 201
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return product.to_dict(), 200
 
-@app.route("/products/<int:id>", methods=["PATCH"])
-def update_product(id):
-    product = Product.query.get_or_404(id)
-    data = request.json
-    if "name" in data:
-        product.name = data["name"]
-    if "price" in data:
-        product.price = data["price"]
-    db.session.commit()
-    return jsonify({"id": product.id, "name": product.name, "price": product.price})
-
-@app.route("/products/<int:id>", methods=["DELETE"])
-def delete_product(id):
-    product = Product.query.get_or_404(id)
-    db.session.delete(product)
-    db.session.commit()
-    return jsonify({"message": "Product deleted"}), 200
+    def delete(self, id):
+        product = Product.query.get_or_404(id)
+        db.session.delete(product)
+        db.session.commit()
+        return {"message": "Product deleted"}, 200
 
 
 
-@app.route("/orders", methods=["POST"])
-def create_order():
-    data = request.json
-    order = Order(
-        user_name=data["user_name"],
-        product_id=data["product_id"],
-        quantity=data.get("quantity", 1)
-    )
-    db.session.add(order)
-    db.session.commit()
-    return jsonify({
-        "id": order.id,
-        "user_name": order.user_name,
-        "product_id": order.product_id,
-        "quantity": order.quantity
-    }), 201
+# 2. Orders
+class OrderList(Resource):
+    def get(self):
+        orders = Order.query.all()
+        return [o.to_dict() for o in orders], 200
 
-@app.route("/orders/<string:username>", methods=["GET"])
-def get_orders(username):
-    orders = Order.query.filter_by(user_name=username).all()
-    return jsonify([
-        {
-            "id": o.id,
-            "user_name": o.user_name,
-            "product": o.product.name,
-            "quantity": o.quantity,
-            "price": o.product.price
-        }
-        for o in orders
-    ])
+    def post(self):
+        data = request.get_json() or {}
+        if not data.get("user_id") or not data.get("items"):
+            return {"error": "Missing required fields: 'user_id' and 'items'"}, 400
+
+        try:
+            order = Order(user_id=data["user_id"])
+            db.session.add(order)
+            db.session.commit()  # commit first to get order.id
+
+            for item in data.get("items", []):
+                order_item = OrderItem(
+                    order_id=order.id,
+                    product_id=item["product_id"],
+                    quantity=item.get("quantity", 1),
+                )
+                db.session.add(order_item)
+
+            db.session.commit()
+            return {"id": order.id, "total": order.total}, 201
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 400
 
 
+class OrderResource(Resource):
+    def get(self, id):
+        order = Order.query.get_or_404(id)
+        return order.to_dict(), 200
+
+    def delete(self, id):
+        order = Order.query.get_or_404(id)
+        db.session.delete(order)
+        db.session.commit()
+        return {"message": "Order deleted"}, 200
+
+
+
+# 3. Users
+class UserList(Resource):
+    def get(self):
+        users = User.query.all()
+        return [u.to_dict() for u in users], 200
+
+    def post(self):
+        data = request.get_json() or {}
+        required = ["username", "email", "password"]
+        missing = [field for field in required if field not in data]
+        if missing:
+            return {"error": f"Missing required fields: {', '.join(missing)}"}, 400
+
+        try:
+            user = User(username=data["username"], email=data["email"])
+            user.password = data["password"]
+            db.session.add(user)
+            db.session.commit()
+            return user.to_dict(), 201
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 400
+
+
+# 4. Cart Items
+class CartList(Resource):
+    def get(self, user_id):
+        cart_items = CartItemModel.query.filter_by(user_id=user_id).all()
+        return [item.to_dict() for item in cart_items], 200
+
+    def post(self, user_id):
+        data = request.get_json() or {}
+        if not data.get("product_id"):
+            return {"error": "Missing required field: 'product_id'"}, 400
+
+        try:
+            item = CartItemModel(
+                user_id=user_id,
+                product_id=data["product_id"],
+                quantity=data.get("quantity", 1)
+            )
+            db.session.add(item)
+            db.session.commit()
+            return item.to_dict(), 201
+        except Exception as e:
+            db.session.rollback()
+            return {"error": str(e)}, 400
+
+
+class CartItemResource(Resource):
+    def patch(self, user_id, cart_item_id):
+        item = CartItemModel.query.filter_by(user_id=user_id, id=cart_item_id).first_or_404()
+        data = request.get_json() or {}
+        if "quantity" in data:
+            item.quantity = data["quantity"]
+        db.session.commit()
+        return item.to_dict(), 200
+
+    def delete(self, user_id, cart_item_id):
+        item = CartItemModel.query.filter_by(user_id=user_id, id=cart_item_id).first_or_404()
+        db.session.delete(item)
+        db.session.commit()
+        return {"message": "Cart item deleted"}, 200
+
+
+
+# Register resources
+api.add_resource(ProductList, "/products")
+api.add_resource(ProductResource, "/products/<int:id>")
+
+api.add_resource(OrderList, "/orders")
+api.add_resource(OrderResource, "/orders/<int:id>")
+
+api.add_resource(UserList, "/users")
+
+api.add_resource(CartList, "/cart/<int:user_id>")
+api.add_resource(CartItemResource, "/cart/<int:user_id>/<int:cart_item_id>")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(port=5000, debug=True)
