@@ -11,6 +11,11 @@ db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
 
+#Routes
+@app.route("/")
+def home():
+    return "<h1>Welcome to Cartify API!</h1>", 200
+
 
 # 1. Products
 class ProductList(Resource):
