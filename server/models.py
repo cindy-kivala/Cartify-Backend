@@ -4,6 +4,7 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+
 class Product(db.Model):
     __tablename__ = "products"
 
@@ -19,13 +20,49 @@ class Product(db.Model):
         return value
 
 
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String, unique=True, nullable=False)
+    email = db.Column(db.String, unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    orders = db.relationship("Order", backref="user", lazy=True)
+    cart_items = db.relationship("CartItem", backref="user", lazy=True)
+
+
+
 class Order(db.Model):
     __tablename__ = "orders"
 
     id = db.Column(db.Integer, primary_key=True)
-    user_name = db.Column(db.String, nullable=False)
-    product_id = db.Column(db.Integer, db.ForeignKey("products.id"))
-    quantity = db.Column(db.Integer, default=1)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    product = db.relationship("Product", backref="orders")
+    items = db.relationship("OrderItem", backref="order", lazy=True)
+
+
+
+class OrderItem(db.Model):
+    __tablename__ = "order_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey("orders.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+
+    product = db.relationship("Product")
+
+
+
+class CartItem(db.Model):
+    __tablename__ = "cart_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id"), nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+
+    product = db.relationship("Product")
