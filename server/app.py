@@ -4,6 +4,7 @@ from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from server.models import db, Product, User, Order, OrderItem, CartItem as CartItemModel
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///store.db"
@@ -43,27 +44,28 @@ def register():
 
     return jsonify({"message": "User registered successfully"}), 201
 
-
-@app.route("/login", methods=["POST"])
+# Login route
+@app.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
-    email = data.get("email")
-    password = data.get("password")
+    try:
+        data = request.get_json()
+        if not data or 'email' not in data or 'password' not in data:
+            return jsonify({"error": "Email and password are required"}), 400
 
-    if not email or not password:
-        return jsonify({"error": "Email and password required"}), 400
+        user = User.query.filter_by(email=data['email']).first()
+        if not user:
+            return jsonify({"error": "Invalid Email credentials"}), 401
 
-    # Look up user in database
-    user = User.query.filter_by(email=email).first()
-    if not user or user.password != password:
-        return jsonify({"error": "Invalid credentials"}), 401
+        if not bcrypt.check_password_hash(user._password_hash, data['password']):
+            return jsonify({"error": "Invalid Pass credentials"}), 401
 
-    # returrn
-    return jsonify({
-        "id": user.id,
-        "username": user.username,
-        "email": user.email
-    }), 200
+        # If login successful, return some user info (avoid sending password)
+        return jsonify({"id": user.id, "email": user.email}), 200
+
+    except Exception as e:
+        # Log the actual exception for debugging
+        print("Login error:", e)
+        return jsonify({"error": "Internal server error"}), 500
 
 # 1. Products
 class ProductList(Resource):
@@ -107,6 +109,8 @@ class ProductResource(Resource):
             product.category = data["category"]
         if "details" in data:
             product.details = data["details"]
+        if "image" in data:
+            product.image = data["image"]
 
         db.session.commit()
         return product.to_dict(), 200
@@ -191,7 +195,17 @@ class UserList(Resource):
 class CartList(Resource):
     def get(self, user_id):
         cart_items = CartItemModel.query.filter_by(user_id=user_id).all()
-        return [item.to_dict() for item in cart_items], 200
+        result = []
+        for item in cart_items:
+            product = Product.query.get(item.product_id)
+            result.append({
+                "id": item.id,
+                "product_id": product.id,
+                "name": product.name,         
+                "price": product.price,      
+                "quantity": item.quantity
+            })
+        return result, 200
 
     def post(self, user_id):
         # Add product to cart
