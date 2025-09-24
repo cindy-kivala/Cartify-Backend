@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from server.models import db, Product, User, Order, OrderItem, CartItem as CartItemModel
@@ -11,13 +12,58 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
-CORS(app, origins=["http://localhost:5173"])
+bcrypt = Bcrypt(app)
+CORS(app)
+
+users = []
 
 #Routes
 @app.route("/")
 def home():
     return "<h1>Welcome to Cartify API!</h1>", 200
+@app.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+    username = data.get("username")
 
+    if not email or not password or not username:
+        return jsonify({"error": "Username, email, and password required"}), 400
+
+    # Check if user exists
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "Email already registered"}), 400
+
+    hashed_pw = bcrypt.generate_password_hash(password).decode("utf-8")
+
+    user = User(username=username, email=email, password=hashed_pw)
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({"message": "User registered successfully"}), 201
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Email and password required"}), 400
+
+    # Look up user in database
+    user = User.query.filter_by(email=email).first()
+    if not user or user.password != password:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    # returrn
+    return jsonify({
+        "id": user.id,
+        "username": user.username,
+        "email": user.email
+    }), 200
 
 # 1. Products
 class ProductList(Resource):
