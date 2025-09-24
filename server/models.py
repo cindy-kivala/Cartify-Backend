@@ -13,6 +13,9 @@ class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
     price = db.Column(db.Float, nullable=False)
+    category = db.Column(db.String, nullable=False, server_default="Uncategorized")
+    details = db.Column(db.Text, nullable=True)
+    image = db.Column(db.String)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     @validates("price")
@@ -26,6 +29,9 @@ class Product(db.Model):
             "id": self.id,
             "name": self.name,
             "price": self.price,
+            "category": self.category,
+            "details": self.details,
+            "image": self.image,
             "created_at": self.created_at.isoformat()
         }
 

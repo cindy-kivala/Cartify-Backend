@@ -1,8 +1,8 @@
-"""Initial migration
+"""initial tables with product addons
 
-Revision ID: 7f85eb916cff
+Revision ID: d8775df44134
 Revises: 
-Create Date: 2025-09-23 21:20:57.586425
+Create Date: 2025-09-24 11:42:59.655084
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '7f85eb916cff'
+revision = 'd8775df44134'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,6 +22,9 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('price', sa.Float(), nullable=False),
+    sa.Column('category', sa.String(), server_default='Uncategorized', nullable=False),
+    sa.Column('details', sa.Text(), nullable=True),
+    sa.Column('image', sa.String(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )

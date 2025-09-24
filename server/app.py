@@ -11,7 +11,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
-CORS(app)
+CORS(app, origins=["http://localhost:5173"])
 
 #Routes
 @app.route("/")
@@ -31,7 +31,12 @@ class ProductList(Resource):
             return {"error": "Missing required fields: 'name' and 'price'"}, 400
 
         try:
-            product = Product(name=data["name"], price=data["price"])
+            product = Product(
+            name=data["name"],
+            price=data["price"],
+            category=data.get("category"),
+            details=data.get("details")
+        )
             db.session.add(product)
             db.session.commit()
             return product.to_dict(), 201
@@ -52,6 +57,11 @@ class ProductResource(Resource):
             product.name = data["name"]
         if "price" in data:
             product.price = data["price"]
+        if "category" in data:
+            product.category = data["category"]
+        if "details" in data:
+            product.details = data["details"]
+
         db.session.commit()
         return product.to_dict(), 200
 
@@ -138,23 +148,38 @@ class CartList(Resource):
         return [item.to_dict() for item in cart_items], 200
 
     def post(self, user_id):
+        # Add product to cart
         data = request.get_json() or {}
-        if not data.get("product_id"):
+        product_id = data.get("product_id")
+        if not product_id:
             return {"error": "Missing required field: 'product_id'"}, 400
 
         try:
-            item = CartItemModel(
-                user_id=user_id,
-                product_id=data["product_id"],
-                quantity=data.get("quantity", 1)
-            )
-            db.session.add(item)
-            db.session.commit()
-            return item.to_dict(), 201
+            # Check if the product is already in the user's cart
+            existing_item = CartItemModel.query.filter_by(
+                user_id=user_id, 
+                product_id=data["product_id"]
+            ).first()
+
+            if existing_item:
+                # Increment the quantity
+                existing_item.quantity += data.get("quantity", 1)
+                db.session.commit()
+                return existing_item.to_dict(), 200
+            else:
+                # Add new cart item
+                item = CartItemModel(
+                    user_id=user_id,
+                    product_id=data["product_id"],
+                    quantity=data.get("quantity", 1)
+                )
+                db.session.add(item)
+                db.session.commit()
+                return item.to_dict(), 201
+
         except Exception as e:
             db.session.rollback()
             return {"error": str(e)}, 400
-
 
 class CartItemResource(Resource):
     def patch(self, user_id, cart_item_id):
