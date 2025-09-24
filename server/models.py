@@ -1,3 +1,4 @@
+# server/models.py
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
 from datetime import datetime
@@ -5,7 +6,6 @@ from flask_bcrypt import Bcrypt
 
 db = SQLAlchemy()
 bcrypt = Bcrypt()
-
 
 class Product(db.Model):
     __tablename__ = "products"
@@ -21,6 +21,13 @@ class Product(db.Model):
             raise ValueError("Price must be greater than 0")
         return value
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "price": self.price,
+            "created_at": self.created_at.isoformat()
+        }
 
 class User(db.Model):
     __tablename__ = "users"
@@ -44,7 +51,14 @@ class User(db.Model):
 
     def check_password(self, plaintext_password):
         return bcrypt.check_password_hash(self._password_hash, plaintext_password)
-
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "created_at": self.created_at.isoformat()
+        }
 
 class Order(db.Model):
     __tablename__ = "orders"
@@ -55,6 +69,25 @@ class Order(db.Model):
 
     items = db.relationship("OrderItem", backref="order", lazy=True)
 
+    @property
+    def total(self):
+        return sum(item.product.price * item.quantity for item in self.items)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "items": [
+                {
+                    "product": item.product.name,
+                    "quantity": item.quantity,
+                    "price": item.product.price
+                }
+                for item in self.items
+            ],
+            "total": self.total,
+            "created_at": self.created_at.isoformat()
+        }
 
 class OrderItem(db.Model):
     __tablename__ = "order_items"
@@ -66,6 +99,13 @@ class OrderItem(db.Model):
 
     product = db.relationship("Product")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "product": self.product.name,
+            "quantity": self.quantity,
+            "price": self.product.price
+        }
 
 class CartItem(db.Model):
     __tablename__ = "cart_items"
@@ -77,3 +117,10 @@ class CartItem(db.Model):
 
     product = db.relationship("Product")
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "product": self.product.name,
+            "quantity": self.quantity,
+            "price": self.product.price
+        }
