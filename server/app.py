@@ -24,6 +24,11 @@ def create_app():
     # -------------------- Blueprints --------------------
     app.register_blueprint(auth_bp)
 
+     # Default root route
+    @app.route("/")
+    def index():
+        return jsonify({"message": "Cartify Backend is live!"})
+
     # -------------------- Products --------------------
     @app.route("/products", methods=["GET"])
     def get_products():
@@ -228,4 +233,4 @@ if __name__ == "__main__":
     app = create_app()
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run(debug=False)
