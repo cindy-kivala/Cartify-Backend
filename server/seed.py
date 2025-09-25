@@ -24,7 +24,7 @@ with app.app_context():
             image_url="https://cdn.mos.cms.futurecdn.net/iCPyXMDUqz8ABHaK4zxiaF.jpg",
             description="High-performance laptop with 16GB RAM, 512GB SSD and a 14-inch display.",
             category="Computers",
-            brand="Dell",
+            brand="Razor",
             stock=random.randint(5, 50)
         ),
         Product(
@@ -42,7 +42,7 @@ with app.app_context():
             image_url="https://cdn.thewirecutter.com/wp-content/media/2022/11/gaming-mouse-2048px-6823.jpg?auto=webp&quality=75&width=1024",
             description="Ergonomic wireless gaming mouse with adjustable DPI and programmable buttons.",
             category="Accessories",
-            brand="Logitech",
+            brand="Razor",
             stock=random.randint(5, 50)
         ),
         Product(
@@ -96,7 +96,7 @@ with app.app_context():
             image_url="https://www.zdnet.com/a/img/2025/04/30/5ee373e8-fb54-4c23-b981-74d8a0c65984/3.jpg",
             description="Lightweight 10-inch tablet with high-resolution display and stylus support.",
             category="Mobile",
-            brand="Samsung",
+            brand="Apple",
             stock=random.randint(5, 50)
         ),
         Product(
