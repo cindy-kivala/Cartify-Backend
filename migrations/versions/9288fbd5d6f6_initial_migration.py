@@ -1,16 +1,9 @@
-<<<<<<<< HEAD:migrations/versions/6f252f1b18fb_initial_migration.py
-"""initial migration
 
-Revision ID: 6f252f1b18fb
-Revises: 
-Create Date: 2025-09-24 04:01:44.212701
-========
 """Initial migration
 
 Revision ID: 9288fbd5d6f6
 Revises: 
 Create Date: 2025-09-24 09:33:17.587126
->>>>>>>> ryanwahinya:migrations/versions/9288fbd5d6f6_initial_migration.py
 
 """
 from alembic import op
@@ -18,12 +11,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-<<<<<<<< HEAD:migrations/versions/6f252f1b18fb_initial_migration.py
-revision = '6f252f1b18fb'
-========
 revision = '9288fbd5d6f6'
->>>>>>>> ryanwahinya:migrations/versions/9288fbd5d6f6_initial_migration.py
-down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -34,10 +22,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('price', sa.Float(), nullable=False),
-<<<<<<<< HEAD:migrations/versions/6f252f1b18fb_initial_migration.py
-========
     sa.Column('image_url', sa.String(), nullable=True),
->>>>>>>> ryanwahinya:migrations/versions/9288fbd5d6f6_initial_migration.py
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
@@ -53,13 +38,8 @@ def upgrade():
     )
     op.create_table('cart_items',
     sa.Column('id', sa.Integer(), nullable=False),
-<<<<<<<< HEAD:migrations/versions/6f252f1b18fb_initial_migration.py
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=False),
-========
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('product_id', sa.Integer(), nullable=True),
->>>>>>>> ryanwahinya:migrations/versions/9288fbd5d6f6_initial_migration.py
     sa.Column('quantity', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
