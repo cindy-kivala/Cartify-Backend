@@ -13,6 +13,7 @@ def create_app():
 
     # -------------------- Database --------------------
     basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev_fallback_key")
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(basedir, 'store.db')}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
