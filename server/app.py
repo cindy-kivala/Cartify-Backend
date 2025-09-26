@@ -157,11 +157,9 @@ def create_app():
             if not product:
                 return jsonify({"error": f"Product with id {item.product_id} not found"}), 404
 
-            # Check stock
             if item.quantity > product.stock:
                 return jsonify({"error": f"Not enough stock for {product.name}"}), 400
 
-            # Subtract stock
             product.stock -= item.quantity
 
             order_item = OrderItem(
@@ -171,7 +169,6 @@ def create_app():
             )
             db.session.add(order_item)
 
-            # Remove item from cart
             db.session.delete(item)
 
         db.session.commit()
@@ -211,7 +208,6 @@ def create_app():
             if product.stock < item["quantity"]:
                 return jsonify({"error": f"Not enough stock for {product.name}"}), 400
 
-            # Decrease stock
             product.stock -= item["quantity"]
 
             order_item = OrderItem(
@@ -222,7 +218,6 @@ def create_app():
             )
             db.session.add(order_item)
 
-            # Remove from cart if exists
             cart_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
             if cart_item:
                 db.session.delete(cart_item)
@@ -247,4 +242,7 @@ if __name__ == "__main__":
     app = create_app()
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    
+    # Read PORT from environment (Render sets this automatically)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
