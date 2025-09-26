@@ -22,6 +22,27 @@ def create_app():
     # -------------------- Blueprints --------------------
     app.register_blueprint(auth_bp)
 
+    # -------------------- Users --------------------
+    @app.route("/users", methods=["GET"])
+    def get_users():
+        users = User.query.all()
+        return jsonify([u.to_dict() for u in users])
+
+    @app.route("/users", methods=["POST"])
+    def create_user():
+        data = request.json
+        if not data.get("username") or not data.get("email") or not data.get("password"):
+            return jsonify({"error": "Missing required fields"}), 400
+        if User.query.filter_by(username=data["username"]).first():
+            return jsonify({"error": "Username already exists"}), 400
+        if User.query.filter_by(email=data["email"]).first():
+            return jsonify({"error": "Email already exists"}), 400
+
+        user = User(username=data["username"], email=data["email"], password=data["password"])
+        db.session.add(user)
+        db.session.commit()
+        return jsonify(user.to_dict()), 201
+
     # -------------------- Products --------------------
     @app.route("/products", methods=["GET"])
     def get_products():
