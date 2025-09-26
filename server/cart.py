@@ -60,11 +60,28 @@ def add_to_cart():
 # ---------------- UPDATE CART ITEM QUANTITY ----------------
 @cart_bp.route("/item/<int:item_id>", methods=["PATCH"])
 def update_cart_item(item_id):
+    # Get the JSON payload
     data = request.get_json(force=True)
+    print("PATCH payload received:", data)
+
+    # ------------------ ENSURE QUANTITY IS A NUMBER ------------------
     quantity = data.get("quantity")
-    if quantity is None or quantity < 1:
+    print("Extracted quantity:", quantity, "Type:", type(quantity))
+
+    if isinstance(quantity, dict):
+        quantity = quantity.get("value")  # in case frontend sends nested object
+        print("Nested quantity extracted:", quantity)
+    try:
+        quantity = int(quantity)
+    except (TypeError, ValueError):
+        print("Invalid quantity received!")
         return jsonify({"error": "Invalid quantity"}), 400
 
+    # Validate quantity
+    if quantity < 1:
+        return jsonify({"error": "Invalid quantity"}), 400
+
+    # Continue with updating the cart item
     item = CartItem.query.get(item_id)
     if not item:
         return jsonify({"error": "Cart item not found"}), 404
@@ -78,6 +95,7 @@ def update_cart_item(item_id):
         "price": item.product.price,
         "image_url": item.product.image_url
     }), 200
+
 
 
 # ---------------- REMOVE CART ITEM ----------------
