@@ -112,35 +112,41 @@ def remove_cart_item(item_id):
 # ---------------- CHECKOUT ----------------
 @cart_bp.route("/checkout/<username>", methods=["POST"])
 def checkout_cart(username):
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        return jsonify({"error": "User not found"}), 404
+    try:
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
 
-    cart_items = CartItem.query.filter_by(user_id=user.id).all()
-    if not cart_items:
-        return jsonify({"error": "Cart is empty"}), 400
+        cart_items = CartItem.query.filter_by(user_id=user.id).all()
+        if not cart_items:
+            return jsonify({"error": "Cart is empty"}), 400
 
-    order = Order(user_id=user.id)
-    db.session.add(order)
-    db.session.flush()  # to get order.id
+        order = Order(user_id=user.id)
+        db.session.add(order)
+        db.session.flush()
 
-    for item in cart_items:
-        product = item.product
-        if not product:
-            return jsonify({"error": f"Product with id {item.product_id} not found"}), 404
+        for item in cart_items:
+            product = Product.query.get(item.product_id)
+            if not product:
+                return jsonify({"error": f"Product {item.product_id} not found"}), 404
 
-        if item.quantity > product.stock:
-            return jsonify({"error": f"Not enough stock for {product.name}"}), 400
+            if item.quantity > product.stock:
+                return jsonify({"error": f"Not enough stock for {product.name}"}), 400
 
-        product.stock -= item.quantity
-        order_item = OrderItem(
-            order_id=order.id,
-            product_id=product.id,
-            quantity=item.quantity,
-            price=product.price
-        )
-        db.session.add(order_item)
-        db.session.delete(item)
+            product.stock -= item.quantity
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=product.id,
+                quantity=item.quantity,
+                price=product.price
+            )
+            db.session.add(order_item)
+            db.session.delete(item)
 
-    db.session.commit()
-    return jsonify({"message": "Checkout successful!", "order_id": order.id}), 200
+        db.session.commit()
+        return jsonify({"message": "Checkout successful!", "order_id": order.id}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(e)  # Log in server console
+        return jsonify({"error": "Checkout failed, see server logs"}), 500
