@@ -17,19 +17,23 @@ def get_cart(username):
 
     for item in cart_items:
         product = Product.query.get(item.product_id)
+        if not product:
+           continue  # skip if product was deleted from DB
+
         item_total = product.price * item.quantity
         total_quantity += item.quantity
         total_price += item_total
 
         result.append({
-            "id": item.id,
-            "quantity": item.quantity,
-            "stock": product.stock,
-            "product_id": product.id,
-            "product_name": product.name,
-            "price": product.price,
-            "image_url": product.image_url
-        })
+          "id": item.id,
+          "quantity": item.quantity,
+          "stock": product.stock,
+          "product_id": product.id,
+          "product_name": product.name,
+          "price": product.price,
+          "image_url": product.image_url
+       })
+
 
     return jsonify({
         "items": result,
@@ -140,8 +144,11 @@ def checkout_cart(username):
 
     for item in cart_items:
         product = Product.query.get(item.product_id)
+        if not product:
+           return jsonify({"error": f"Product with id {item.product_id} not found"}), 404
+
         if item.quantity > product.stock:
-            return jsonify({"error": f"Not enough stock for {product.name}"}), 400
+           return jsonify({"error": f"Not enough stock for {product.name}"}), 400
 
         product.stock -= item.quantity
         order_item = OrderItem(
