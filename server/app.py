@@ -12,20 +12,21 @@ migrate = Migrate()
 def create_app():
     app = Flask(__name__)
 
-    # -------------------- Database --------------------
-    basedir = os.path.abspath(os.path.dirname(__file__))
+     # -------------------- Configuration --------------------
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev_fallback_key")
-    
-    # Use PostgreSQL for production
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # Use PostgreSQL in production if DATABASE_URL is set
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
-        # Production - use PostgreSQL on Render
-        app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace("postgres://", "postgresql://", 1)
+        # Render uses "postgres://", which SQLAlchemy needs as "postgresql://"
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url.replace(
+            "postgres://", "postgresql://", 1
+        )
     else:
-        # Development - use SQLite locally
-        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(basedir, 'store.db')}"
-    
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+        # Local development uses SQLite
+        basedir = os.path.abspath(os.path.dirname(__file__))
+        app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(basedir, 'local.db')}"
 
     db.init_app(app)
     migrate.init_app(app, db)
