@@ -1,11 +1,10 @@
 # server/models.py
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-from flask_bcrypt import Bcrypt
+import bcrypt  # <- use plain bcrypt
 from sqlalchemy.orm import validates
 
 db = SQLAlchemy()
-bcrypt = Bcrypt()
 
 
 # ---------------- USER ----------------
@@ -14,7 +13,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String, unique=True, nullable=False)
     email = db.Column(db.String, unique=True, nullable=False)
-    _password_hash = db.Column("password_hash", db.String, nullable=False)
+    _password_hash = db.Column("password_hash", db.LargeBinary, nullable=False)  # store as bytes
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     cart_items = db.relationship("CartItem", backref="user", lazy=True)
@@ -26,10 +25,11 @@ class User(db.Model):
 
     @password.setter
     def password(self, plaintext):
-        self._password_hash = bcrypt.generate_password_hash(plaintext).decode("utf-8")
+        # bcrypt requires bytes
+        self._password_hash = bcrypt.hashpw(plaintext.encode("utf-8"), bcrypt.gensalt())
 
     def check_password(self, plaintext):
-        return bcrypt.check_password_hash(self._password_hash, plaintext)
+        return bcrypt.checkpw(plaintext.encode("utf-8"), self._password_hash)
 
     def to_dict(self):
         return {
@@ -51,7 +51,7 @@ class Product(db.Model):
     image_url = db.Column(db.String, nullable=True)
     category = db.Column(db.String, nullable=True)
     brand = db.Column(db.String, nullable=True)
-    stock = db.Column(db.Integer, default=0)  # ✅ new field
+    stock = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     cart_items = db.relationship("CartItem", back_populates="product")
@@ -78,7 +78,7 @@ class Product(db.Model):
             "image_url": self.image_url,
             "category": self.category,
             "brand": self.brand,
-            "stock": self.stock,  # ✅ include in response
+            "stock": self.stock,
             "created_at": self.created_at.isoformat()
         }
 
