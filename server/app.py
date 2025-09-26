@@ -21,7 +21,10 @@ def create_app():
     migrate.init_app(app, db)
     CORS(app,
       origins=["https://cartify-dept.netlify.app"],
-      supports_credentials=True)
+      supports_credentials=True,
+      allow_headers="*",
+      methods= ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
+    )
 
 
     # -------------------- Blueprints --------------------
