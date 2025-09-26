@@ -127,19 +127,20 @@ def create_app():
         data = request.get_json()
         cart_item = CartItem.query.get(item_id)
         if not cart_item:
-            return jsonify({"error": "Cart item not found"}), 404
+           return jsonify({"error": "Cart item not found"}), 404
 
-        if "quantity" in data:
-            try:
-                new_quantity = int(data["quantity"])
-                if new_quantity <= 0:
-                    return jsonify({"error": "Quantity must be greater than 0"}), 400
-                if new_quantity > cart_item.product.stock:
-                    return jsonify({"error": f"Only {cart_item.product.stock} items available"}), 400
-                cart_item.quantity = new_quantity
-            except ValueError:
-                return jsonify({"error": "Invalid quantity"}), 400
+        quantity = data.get("quantity")
+        try:
+            new_quantity = int(quantity)  # ensures it's an int
+        except (TypeError, ValueError):
+           return jsonify({"error": "Invalid quantity"}), 400
 
+        if new_quantity < 1:
+           return jsonify({"error": "Quantity must be greater than 0"}), 400
+        if new_quantity > cart_item.product.stock:
+           return jsonify({"error": f"Only {cart_item.product.stock} items available"}), 400
+
+        cart_item.quantity = new_quantity
         db.session.commit()
         return jsonify(cart_item.to_dict()), 200
 
