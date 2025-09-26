@@ -22,7 +22,10 @@ def create_app():
     migrate.init_app(app, db)
 
     CORS(app,
-      origins=["https://cartify-dept.netlify.app"],
+      origins=[
+          "https://cartify-dept.netlify.app",
+          "http://localhost:5173"
+          ],
       supports_credentials=True,
       allow_headers="*",
       methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
