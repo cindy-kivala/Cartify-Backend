@@ -66,32 +66,44 @@ def create_app():
 
     @app.route("/cart", methods=["POST"])
     def add_to_cart():
-        data = request.json
-        user = User.query.filter_by(username=data["username"]).first()
-        product = Product.query.get(data["product_id"])
-        if not user or not product:
-            return jsonify({"error": "Invalid user or product"}), 400
+      data = request.get_json()
 
-        if product.stock <= 0:
-            return jsonify({"error": "Product is out of stock"}), 400
+    # --- Validate payload ---
+      if not data:
+        return jsonify({"error": "No data provided"}), 400
 
-        existing_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
-        if existing_item:
-            new_quantity = existing_item.quantity + data.get("quantity", 1)
-            if new_quantity > product.stock:
-                return jsonify({"error": f"Only {product.stock} items available"}), 400
-            existing_item.quantity = new_quantity
-            db.session.commit()
-            return jsonify(existing_item.to_dict()), 200
+      username = data.get("username")
+      product_id = data.get("product_id")
+      quantity = data.get("quantity", 1)
 
-        item = CartItem(
-            user_id=user.id,
-            product_id=product.id,
-            quantity=data.get("quantity", 1)
-        )
-        db.session.add(item)
+      if not username or not product_id:
+        return jsonify({"error": "username and product_id are required"}), 400
+
+    # --- Fetch user and product ---
+      user = User.query.filter_by(username=username).first()
+      product = Product.query.get(product_id)
+      if not user or not product:
+        return jsonify({"error": "Invalid user or product"}), 400
+
+      if quantity > product.stock:
+        return jsonify({"error": f"Only {product.stock} items available"}), 400
+
+    # --- Add to cart ---
+      existing_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
+      if existing_item:
+        new_quantity = existing_item.quantity + quantity
+        if new_quantity > product.stock:
+            return jsonify({"error": f"Only {product.stock} items available"}), 400
+        existing_item.quantity = new_quantity
         db.session.commit()
-        return jsonify(item.to_dict()), 201
+        return jsonify(existing_item.to_dict()), 200
+
+      new_item = CartItem(user_id=user.id, product_id=product.id, quantity=quantity)
+      db.session.add(new_item)
+      db.session.commit()
+
+      return jsonify(new_item.to_dict()), 201
+
 
     @app.route("/cart/<int:item_id>", methods=["DELETE"])
     def remove_from_cart(item_id):
