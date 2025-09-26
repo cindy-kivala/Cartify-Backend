@@ -1,7 +1,5 @@
 Flask
-Flask-Cors
-Flask-Bcrypt
+Flask-SQLAlchemy
 Flask-Migrate
-Flask-RESTful
-SQLAlchemy
-gunicorn
+Flask-Bcrypt
+Flask-CORS

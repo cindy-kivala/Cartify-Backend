@@ -1,11 +1,9 @@
-# server/app.py
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from .models import db, bcrypt, User, Product, CartItem, Order, OrderItem
 from flask_migrate import Migrate
 from server.auth import auth_bp
 import os
-
 
 def create_app():
     app = Flask(__name__)
@@ -17,7 +15,10 @@ def create_app():
 
     db.init_app(app)
     Migrate(app, db)
-    CORS(app)
+
+    # -------------------- CORS --------------------
+    # Allow requests from frontend (localhost:5173)
+    CORS(app, resources={r"/*": {"origins": ["http://localhost:5173", "http://localhost:5178"]}})
 
     # -------------------- Blueprints --------------------
     app.register_blueprint(auth_bp)
@@ -81,8 +82,15 @@ def create_app():
     @app.route("/cart", methods=["POST"])
     def add_to_cart():
         data = request.json
-        user = User.query.filter_by(username=data["username"]).first()
-        product = Product.query.get(data["product_id"])
+        username = data.get("username")
+        product_id = data.get("product_id")
+        quantity = data.get("quantity", 1)
+
+        if not username or not product_id:
+            return jsonify({"error": "Missing username or product_id"}), 400
+
+        user = User.query.filter_by(username=username).first()
+        product = Product.query.get(product_id)
         if not user or not product:
             return jsonify({"error": "Invalid user or product"}), 400
 
@@ -91,18 +99,14 @@ def create_app():
 
         existing_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
         if existing_item:
-            new_quantity = existing_item.quantity + data.get("quantity", 1)
+            new_quantity = existing_item.quantity + quantity
             if new_quantity > product.stock:
                 return jsonify({"error": f"Only {product.stock} items available"}), 400
             existing_item.quantity = new_quantity
             db.session.commit()
             return jsonify(existing_item.to_dict()), 200
 
-        item = CartItem(
-            user_id=user.id,
-            product_id=product.id,
-            quantity=data.get("quantity", 1)
-        )
+        item = CartItem(user_id=user.id, product_id=product.id, quantity=quantity)
         db.session.add(item)
         db.session.commit()
         return jsonify(item.to_dict()), 201
@@ -122,18 +126,13 @@ def create_app():
         cart_item = CartItem.query.get(item_id)
         if not cart_item:
             return jsonify({"error": "Cart item not found"}), 404
-
         if "quantity" in data:
-            try:
-                new_quantity = int(data["quantity"])
-                if new_quantity <= 0:
-                    return jsonify({"error": "Quantity must be greater than 0"}), 400
-                if new_quantity > cart_item.product.stock:
-                    return jsonify({"error": f"Only {cart_item.product.stock} items available"}), 400
-                cart_item.quantity = new_quantity
-            except ValueError:
-                return jsonify({"error": "Invalid quantity"}), 400
-
+            new_quantity = int(data["quantity"])
+            if new_quantity <= 0:
+                return jsonify({"error": "Quantity must be greater than 0"}), 400
+            if new_quantity > cart_item.product.stock:
+                return jsonify({"error": f"Only {cart_item.product.stock} items available"}), 400
+            cart_item.quantity = new_quantity
         db.session.commit()
         return jsonify(cart_item.to_dict()), 200
 
@@ -155,20 +154,12 @@ def create_app():
         for item in cart_items:
             product = Product.query.get(item.product_id)
             if not product:
-                return jsonify({"error": f"Product with id {item.product_id} not found"}), 404
-
+                return jsonify({"error": f"Product {item.product_id} not found"}), 404
             if item.quantity > product.stock:
                 return jsonify({"error": f"Not enough stock for {product.name}"}), 400
-
             product.stock -= item.quantity
-
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                quantity=item.quantity
-            )
+            order_item = OrderItem(order_id=order.id, product_id=product.id, quantity=item.quantity)
             db.session.add(order_item)
-
             db.session.delete(item)
 
         db.session.commit()
@@ -187,41 +178,27 @@ def create_app():
     def create_order():
         data = request.json
         username = data.get("username")
-        items = data.get("items")  # list of {product_id, quantity}
-
+        items = data.get("items")
         if not username or not items:
             return jsonify({"error": "Missing data"}), 400
-
         user = User.query.filter_by(username=username).first()
         if not user:
             return jsonify({"error": "User not found"}), 404
-
         order = Order(user_id=user.id)
         db.session.add(order)
-        db.session.flush()  # generate order.id
-
+        db.session.flush()
         for item in items:
             product = Product.query.get(item["product_id"])
             if not product:
                 return jsonify({"error": f"Product {item['product_id']} not found"}), 404
-
             if product.stock < item["quantity"]:
                 return jsonify({"error": f"Not enough stock for {product.name}"}), 400
-
             product.stock -= item["quantity"]
-
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                quantity=item["quantity"],
-                price=product.price
-            )
+            order_item = OrderItem(order_id=order.id, product_id=product.id, quantity=item["quantity"], price=product.price)
             db.session.add(order_item)
-
             cart_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
             if cart_item:
                 db.session.delete(cart_item)
-
         db.session.commit()
         return jsonify({"message": "Order created successfully", "order_id": order.id})
 
@@ -237,12 +214,8 @@ def create_app():
 
     return app
 
-
 if __name__ == "__main__":
     app = create_app()
     with app.app_context():
         db.create_all()
-    
-    # Read PORT from environment (Render sets this automatically)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True, host="0.0.0.0", port=5000)
