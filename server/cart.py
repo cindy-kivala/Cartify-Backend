@@ -1,3 +1,4 @@
+# server/cart.py
 from flask import Blueprint, request, jsonify
 from .models import db, User, Product, CartItem, Order, OrderItem
 
@@ -16,24 +17,13 @@ def get_cart(username):
     total_price = 0.0
 
     for item in cart_items:
-        product = Product.query.get(item.product_id)
+        product = item.product
         if not product:
-           continue  # skip if product was deleted from DB
+            continue  # skip deleted products
 
-        item_total = product.price * item.quantity
         total_quantity += item.quantity
-        total_price += item_total
-
-        result.append({
-          "id": item.id,
-          "quantity": item.quantity,
-          "stock": product.stock,
-          "product_id": product.id,
-          "product_name": product.name,
-          "price": product.price,
-          "image_url": product.image_url
-       })
-
+        total_price += product.price * item.quantity
+        result.append(item.to_dict())
 
     return jsonify({
         "items": result,
@@ -55,7 +45,6 @@ def add_to_cart():
 
     user = User.query.get(user_id)
     product = Product.query.get(product_id)
-
     if not user:
         return jsonify({"error": "User not found"}), 404
     if not product:
@@ -83,9 +72,6 @@ def update_cart_item(item_id):
     data = request.get_json(force=True)
     quantity = data.get("quantity")
 
-    if isinstance(quantity, dict):
-        quantity = quantity.get("value")
-
     try:
         quantity = int(quantity)
     except (TypeError, ValueError):
@@ -98,21 +84,17 @@ def update_cart_item(item_id):
     if not item:
         return jsonify({"error": "Cart item not found"}), 404
 
-    if quantity > item.product.stock:
-        return jsonify({"error": f"Only {item.product.stock} items available"}), 400
+    product = item.product
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+
+    if quantity > product.stock:
+        return jsonify({"error": f"Only {product.stock} items available"}), 400
 
     item.quantity = quantity
     db.session.commit()
 
-    return jsonify({
-        "id": item.id,
-        "quantity": item.quantity,
-        "stock": item.product.stock,
-        "product_id": item.product.id,
-        "product_name": item.product.name,
-        "price": item.product.price,
-        "image_url": item.product.image_url
-    }), 200
+    return jsonify(item.to_dict()), 200
 
 
 # ---------------- REMOVE CART ITEM ----------------
@@ -140,15 +122,15 @@ def checkout_cart(username):
 
     order = Order(user_id=user.id)
     db.session.add(order)
-    db.session.flush()
+    db.session.flush()  # to get order.id
 
     for item in cart_items:
-        product = Product.query.get(item.product_id)
+        product = item.product
         if not product:
-           return jsonify({"error": f"Product with id {item.product_id} not found"}), 404
+            return jsonify({"error": f"Product with id {item.product_id} not found"}), 404
 
         if item.quantity > product.stock:
-           return jsonify({"error": f"Not enough stock for {product.name}"}), 400
+            return jsonify({"error": f"Not enough stock for {product.name}"}), 400
 
         product.stock -= item.quantity
         order_item = OrderItem(
