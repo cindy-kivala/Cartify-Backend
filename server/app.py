@@ -19,7 +19,10 @@ def create_app():
 
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, origins=["https://cartify-dept.netlify.app/"])
+    CORS(app,
+      origins=["https://cartify-dept.netlify.app"],
+      supports_credentials=True)
+
 
     # -------------------- Blueprints --------------------
     app.register_blueprint(auth_bp)
