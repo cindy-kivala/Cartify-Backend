@@ -4,6 +4,7 @@ from flask_cors import CORS
 from .models import db, bcrypt, User, Product, CartItem, Order, OrderItem
 from flask_migrate import Migrate
 from server.auth import auth_bp
+from server.cart import cart_bp
 import os
 
 migrate = Migrate()
@@ -29,6 +30,7 @@ def create_app():
 
     # -------------------- Blueprints --------------------
     app.register_blueprint(auth_bp)
+    app.register_blueprint(cart_bp)
 
     # Default root route
     @app.route("/")
