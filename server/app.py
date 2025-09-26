@@ -3,8 +3,12 @@ import os
 from flask import Flask, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_migrate import Migrate
 
-db = SQLAlchemy()
+from .models import db 
+
+# Initialize extensions
+migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
@@ -19,6 +23,7 @@ def create_app():
 
     # -------------------- Extensions --------------------
     db.init_app(app)
+    migrate.init_app(app, db)
     CORS(app, supports_credentials=True, expose_headers=["Content-Type", "Authorization"])
 
     # -------------------- Blueprints --------------------
@@ -28,7 +33,7 @@ def create_app():
     app.register_blueprint(cart_bp, url_prefix="/cart")
     app.register_blueprint(orders_bp, url_prefix="/orders")
 
-    # Root
+    # Root endpoint
     @app.route("/")
     def index():
         return jsonify({"message": "Cartify Backend is live!"})
