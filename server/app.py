@@ -19,12 +19,12 @@ def create_app():
 
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app)
+    CORS(app, origins=["https://cartify-dept.netlify.app/"])
 
     # -------------------- Blueprints --------------------
     app.register_blueprint(auth_bp)
 
-     # Default root route
+    # Default root route
     @app.route("/")
     def index():
         return jsonify({"message": "Cartify Backend is live!"})
@@ -58,65 +58,65 @@ def create_app():
     # -------------------- Cart --------------------
     @app.route("/cart/<string:username>", methods=["GET"])
     def get_cart(username):
+        """Get all cart items for a user"""
         user = User.query.filter_by(username=username).first()
         if not user:
-            return jsonify([]), 404
+            return jsonify({"error": "User not found"}), 404
+
         cart_items = CartItem.query.filter_by(user_id=user.id).all()
-        return jsonify([item.to_dict() for item in cart_items])
+        return jsonify([item.to_dict() for item in cart_items]), 200
 
-    @app.route("/cart", methods=["POST"])
-    def add_to_cart():
-      data = request.get_json()
-
-    # --- Validate payload ---
-      if not data:
-        return jsonify({"error": "No data provided"}), 400
-
-      username = data.get("username")
-      product_id = data.get("product_id")
-      quantity = data.get("quantity", 1)
-
-      if not username or not product_id:
-        return jsonify({"error": "username and product_id are required"}), 400
-
-    # --- Fetch user and product ---
-      user = User.query.filter_by(username=username).first()
-      product = Product.query.get(product_id)
-      if not user or not product:
-        return jsonify({"error": "Invalid user or product"}), 400
-
-      if quantity > product.stock:
-        return jsonify({"error": f"Only {product.stock} items available"}), 400
-
-    # --- Add to cart ---
-      existing_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
-      if existing_item:
-        new_quantity = existing_item.quantity + quantity
-        if new_quantity > product.stock:
-            return jsonify({"error": f"Only {product.stock} items available"}), 400
-        existing_item.quantity = new_quantity
-        db.session.commit()
-        return jsonify(existing_item.to_dict()), 200
-
-      new_item = CartItem(user_id=user.id, product_id=product.id, quantity=quantity)
-      db.session.add(new_item)
-      db.session.commit()
-
-      return jsonify(new_item.to_dict()), 201
-
-
-    @app.route("/cart/<int:item_id>", methods=["DELETE"])
-    def remove_from_cart(item_id):
+    @app.route("/cart/item/<int:item_id>", methods=["GET"])
+    def get_cart_item(item_id):
+        """Get a single cart item by its ID"""
         item = CartItem.query.get(item_id)
         if not item:
             return jsonify({"error": "Cart item not found"}), 404
-        db.session.delete(item)
-        db.session.commit()
-        return jsonify({"message": "Item removed from cart"}), 200
+        return jsonify(item.to_dict()), 200
 
-    @app.route("/cart/<int:item_id>", methods=["PATCH"])
+    @app.route("/cart", methods=["POST"])
+    def add_to_cart():
+        """Add a product to a user's cart"""
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        username = data.get("username")
+        product_id = data.get("product_id")
+        quantity = data.get("quantity", 1)
+
+        if not username or not product_id:
+            return jsonify({"error": "username and product_id are required"}), 400
+
+        user = User.query.filter_by(username=username).first()
+        product = Product.query.get(product_id)
+
+        if not user or not product:
+            return jsonify({"error": "Invalid user or product"}), 400
+
+        if quantity > product.stock:
+            return jsonify({"error": f"Only {product.stock} items available"}), 400
+
+        # Check if item already exists in cart
+        existing_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
+        if existing_item:
+            new_quantity = existing_item.quantity + quantity
+            if new_quantity > product.stock:
+                return jsonify({"error": f"Only {product.stock} items available"}), 400
+            existing_item.quantity = new_quantity
+            db.session.commit()
+            return jsonify(existing_item.to_dict()), 200
+
+        # Create new cart item
+        new_item = CartItem(user_id=user.id, product_id=product.id, quantity=quantity)
+        db.session.add(new_item)
+        db.session.commit()
+        return jsonify(new_item.to_dict()), 201
+
+    @app.route("/cart/item/<int:item_id>", methods=["PATCH"])
     def update_cart_item(item_id):
-        data = request.json
+        """Update quantity of a cart item"""
+        data = request.get_json()
         cart_item = CartItem.query.get(item_id)
         if not cart_item:
             return jsonify({"error": "Cart item not found"}), 404
@@ -134,6 +134,17 @@ def create_app():
 
         db.session.commit()
         return jsonify(cart_item.to_dict()), 200
+
+    @app.route("/cart/item/<int:item_id>", methods=["DELETE"])
+    def remove_from_cart(item_id):
+        """Remove a cart item"""
+        item = CartItem.query.get(item_id)
+        if not item:
+            return jsonify({"error": "Cart item not found"}), 404
+
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify({"message": "Item removed from cart"}), 200
 
     # -------------------- Checkout --------------------
     @app.route("/checkout/<string:username>", methods=["POST"])
