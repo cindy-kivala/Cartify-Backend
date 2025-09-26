@@ -1,25 +1,23 @@
-# Flask & Extensions
 Flask==2.3.3
 Flask-Cors==4.0.1
 Flask-Migrate==4.0.4
 Flask-SQLAlchemy==3.1.1
+Flask-Bcrypt==1.0.1
 
-# Database & PostgreSQL driver
-psycopg2-binary==2.9.9
+# Use newer psycopg2-binary version compatible with Python 3.13
+psycopg2-binary==2.9.10
 
-# Password hashing (instead of Flask-Bcrypt)
 bcrypt==4.0.0
 
-# General utilities
 python-dotenv==1.0.0
 gunicorn==21.2.0
 
-# SQLAlchemy dependencies
+# Core dependencies
 SQLAlchemy==2.0.43
 alembic==1.16.5
 greenlet==3.2.4
 
-# Templating & other
+# Flask core dependencies
 Jinja2==3.1.6
 MarkupSafe==3.0.2
 Werkzeug==3.1.3
