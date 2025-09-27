@@ -1,4 +1,3 @@
-#server/routes/cart.py
 from flask import Blueprint, request, jsonify
 from ..extensions import db
 from ..models import CartItem, Product, User
@@ -6,9 +5,9 @@ from ..models import CartItem, Product, User
 cart_bp = Blueprint("cart_bp", __name__)
 
 # Get user's cart
-@cart_bp.route("/<username>", methods=["GET"], strict_slashes=False)
-def get_cart(username):
-    user = User.query.filter_by(username=username).first()
+@cart_bp.route("/user/<int:user_id>", methods=["GET"], strict_slashes=False)
+def get_cart(user_id):
+    user = User.query.get(user_id)
     if not user:
         return jsonify([]), 404
     items = CartItem.query.filter_by(user_id=user.id).all()
@@ -18,18 +17,18 @@ def get_cart(username):
 # Add to cart
 @cart_bp.route("/", methods=["POST"], strict_slashes=False)
 def add_to_cart():
-    data = request.get_json()  # safer than request.json
+    data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
-    username = data.get("username")
+    user_id = data.get("user_id")
     product_id = data.get("product_id")
     quantity = data.get("quantity", 1)
 
-    if not username or not product_id:
-        return jsonify({"error": "Missing username or product_id"}), 400
+    if not user_id or not product_id:
+        return jsonify({"error": "Missing user_id or product_id"}), 400
 
-    user = User.query.filter_by(username=username).first()
+    user = User.query.get(user_id)
     product = Product.query.get(product_id)
 
     if not user:
@@ -49,7 +48,7 @@ def add_to_cart():
     return jsonify(cart_item.to_dict()), 201
 
 
-# Update cart item quantity
+#  Update cart item quantity 
 @cart_bp.route("/item/<int:item_id>", methods=["PATCH"], strict_slashes=False)
 def update_cart_item(item_id):
     data = request.json
@@ -69,9 +68,9 @@ def delete_cart_item(item_id):
 
 
 # Checkout
-@cart_bp.route("/checkout/<username>", methods=["POST"], strict_slashes=False)
-def checkout(username):
-    user = User.query.filter_by(username=username).first()
+@cart_bp.route("/checkout/<int:user_id>", methods=["POST"], strict_slashes=False)
+def checkout(user_id):
+    user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
     CartItem.query.filter_by(user_id=user.id).delete()
