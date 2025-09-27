@@ -6,7 +6,7 @@ from ..models import Order, OrderItem, User, Product
 orders_bp = Blueprint("orders_bp", __name__)
 
 # Get user orders
-@orders_bp.route("/<username>", methods=["GET"])
+@orders_bp.route("/<username>", methods=["GET"], strict_slashes=False)
 def get_orders(username):
     user = User.query.filter_by(username=username).first()
     if not user:
@@ -16,7 +16,7 @@ def get_orders(username):
 
 
 # Create order
-@orders_bp.route("/", methods=["POST"])
+@orders_bp.route("/", methods=["POST"], strict_slashes=False)
 def create_order():
     data = request.json
     user = User.query.filter_by(username=data["username"]).first()
@@ -43,7 +43,7 @@ def create_order():
 
 
 # Delete order
-@orders_bp.route("/<int:order_id>", methods=["DELETE"])
+@orders_bp.route("/<int:order_id>", methods=["DELETE"], strict_slashes=False)
 def delete_order(order_id):
     order = Order.query.get_or_404(order_id)
     db.session.delete(order)

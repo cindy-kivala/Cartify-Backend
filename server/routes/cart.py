@@ -6,7 +6,7 @@ from ..models import CartItem, Product, User
 cart_bp = Blueprint("cart_bp", __name__)
 
 # Get user's cart
-@cart_bp.route("/<username>", methods=["GET"])
+@cart_bp.route("/<username>", methods=["GET"], strict_slashes=False)
 def get_cart(username):
     user = User.query.filter_by(username=username).first()
     if not user:
@@ -16,7 +16,7 @@ def get_cart(username):
 
 
 # Add to cart
-@cart_bp.route("/", methods=["POST"])
+@cart_bp.route("/", methods=["POST"], strict_slashes=False)
 def add_to_cart():
     data = request.json
     user = User.query.filter_by(username=data["username"]).first()
@@ -36,7 +36,7 @@ def add_to_cart():
 
 
 # Update cart item quantity
-@cart_bp.route("/item/<int:item_id>", methods=["PATCH"])
+@cart_bp.route("/item/<int:item_id>", methods=["PATCH"], strict_slashes=False)
 def update_cart_item(item_id):
     data = request.json
     item = CartItem.query.get_or_404(item_id)
@@ -46,7 +46,7 @@ def update_cart_item(item_id):
 
 
 # Delete cart item
-@cart_bp.route("/item/<int:item_id>", methods=["DELETE"])
+@cart_bp.route("/item/<int:item_id>", methods=["DELETE"], strict_slashes=False)
 def delete_cart_item(item_id):
     item = CartItem.query.get_or_404(item_id)
     db.session.delete(item)
@@ -55,7 +55,7 @@ def delete_cart_item(item_id):
 
 
 # Checkout
-@cart_bp.route("/checkout/<username>", methods=["POST"])
+@cart_bp.route("/checkout/<username>", methods=["POST"], strict_slashes=False)
 def checkout(username):
     user = User.query.filter_by(username=username).first()
     if not user:

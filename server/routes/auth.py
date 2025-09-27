@@ -6,7 +6,7 @@ from ..extensions import db
 auth_bp = Blueprint("auth", __name__)
 
 #  REGISTER 
-@auth_bp.route("/register", methods=["POST"])
+@auth_bp.route("/register", methods=["POST"], strict_slashes=False)
 def register():
     data = request.get_json()
 
@@ -26,7 +26,7 @@ def register():
 
 
 # LOGIN 
-@auth_bp.route("/login", methods=["POST"])
+@auth_bp.route("/login", methods=["POST"], strict_slashes=False)
 def login():
     data = request.get_json()
     user = User.query.filter_by(email=data.get("email")).first()
@@ -42,7 +42,7 @@ def login():
 
 
 # LOGOUT
-@auth_bp.route("/logout", methods=["POST"])
+@auth_bp.route("/logout", methods=["POST"], strict_slashes=False)
 def logout():
     # Stateless → just return a message
     return jsonify({"message": "Logout successful"}), 200
