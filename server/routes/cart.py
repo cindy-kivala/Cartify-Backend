@@ -1,19 +1,21 @@
 #server/routes/cart.py
-
 from flask import Blueprint, request, jsonify
-from ..app import db
+from ..extensions import db
 from ..models import CartItem, Product, User
 
 cart_bp = Blueprint("cart_bp", __name__)
 
+# Get user's cart
 @cart_bp.route("/<username>", methods=["GET"])
 def get_cart(username):
     user = User.query.filter_by(username=username).first()
     if not user:
         return jsonify([]), 404
     items = CartItem.query.filter_by(user_id=user.id).all()
-    return jsonify([item.to_dict() for item in items])
+    return jsonify([i.to_dict() for i in items])
 
+
+# Add to cart
 @cart_bp.route("/", methods=["POST"])
 def add_to_cart():
     data = request.json
@@ -32,6 +34,8 @@ def add_to_cart():
     db.session.commit()
     return jsonify(cart_item.to_dict()), 201
 
+
+# Update cart item quantity
 @cart_bp.route("/item/<int:item_id>", methods=["PATCH"])
 def update_cart_item(item_id):
     data = request.json
@@ -40,6 +44,8 @@ def update_cart_item(item_id):
     db.session.commit()
     return jsonify(item.to_dict())
 
+
+# Delete cart item
 @cart_bp.route("/item/<int:item_id>", methods=["DELETE"])
 def delete_cart_item(item_id):
     item = CartItem.query.get_or_404(item_id)
@@ -47,6 +53,8 @@ def delete_cart_item(item_id):
     db.session.commit()
     return jsonify({"message": "Item removed from cart"})
 
+
+# Checkout
 @cart_bp.route("/checkout/<username>", methods=["POST"])
 def checkout(username):
     user = User.query.filter_by(username=username).first()

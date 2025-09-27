@@ -1,37 +1,48 @@
 # server/routes/auth.py
-from flask import Blueprint, request, jsonify, session
-from ..app import db
-from ..models import User
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Blueprint, request, jsonify
+from server.models import User
+from ..extensions import db
 
 auth_bp = Blueprint("auth", __name__)
 
-@auth_bp.route("/signup", methods=["POST"])
-def signup():
-    data = request.json
-    if User.query.filter_by(username=data["username"]).first():
-        return jsonify({"error": "Username already exists"}), 400
+#  REGISTER 
+@auth_bp.route("/register", methods=["POST"])
+def register():
+    data = request.get_json()
 
-    user = User(
-        username=data["username"],
-        password_hash=generate_password_hash(data["password"])
-    )
-    db.session.add(user)
+    if not data.get("username") or not data.get("email") or not data.get("password"):
+        return jsonify({"error": "All fields are required"}), 400
+
+    if User.query.filter_by(email=data["email"]).first():
+        return jsonify({"error": "Email already exists"}), 400
+
+    new_user = User(username=data["username"], email=data["email"])
+    new_user.password = data["password"]  # bcrypt auto-hash via model setter
+
+    db.session.add(new_user)
     db.session.commit()
-    session["username"] = user.username
-    return jsonify({"message": "User created", "username": user.username}), 201
 
+    return jsonify(new_user.to_dict()), 201
+
+
+# LOGIN 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.json
-    user = User.query.filter_by(username=data["username"]).first()
-    if not user or not check_password_hash(user.password_hash, data["password"]):
+    data = request.get_json()
+    user = User.query.filter_by(email=data.get("email")).first()
+
+    if not user or not user.check_password(data.get("password")):
         return jsonify({"error": "Invalid credentials"}), 401
 
-    session["username"] = user.username
-    return jsonify({"message": "Logged in", "username": user.username})
+    # Stateless → frontend decides how to "store" login
+    return jsonify({
+        "message": "Login successful",
+        "user": user.to_dict()
+    }), 200
 
+
+# LOGOUT
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
-    session.pop("username", None)
-    return jsonify({"message": "Logged out"})
+    # Stateless → just return a message
+    return jsonify({"message": "Logout successful"}), 200

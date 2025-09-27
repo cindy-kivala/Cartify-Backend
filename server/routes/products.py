@@ -1,19 +1,25 @@
 # server/routes/products.py
 from flask import Blueprint, jsonify, request
-from ..app import db
+from ..extensions import db
 from ..models import Product
 
-products_bp = Blueprint("products", __name__)
+products_bp = Blueprint("products_bp", __name__)
 
+# Get all products
 @products_bp.route("/", methods=["GET"])
 def get_products():
-    return jsonify([p.to_dict() for p in Product.query.all()])
+    products = Product.query.all()
+    return jsonify([p.to_dict() for p in products])
 
+
+# Get single product by ID
 @products_bp.route("/<int:id>", methods=["GET"])
 def get_product(id):
     product = Product.query.get_or_404(id)
     return jsonify(product.to_dict())
 
+
+# Create product
 @products_bp.route("/", methods=["POST"])
 def create_product():
     data = request.json

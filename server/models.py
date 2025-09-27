@@ -1,46 +1,43 @@
 # server/models.py
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
-import bcrypt  # <- use plain bcrypt
 from sqlalchemy.orm import validates
+from .extensions import db, bcrypt 
 
-db = SQLAlchemy()
-
-
-# ---------------- USER ----------------
+# user model
 class User(db.Model):
     __tablename__ = "users"
+
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String, unique=True, nullable=False)
-    email = db.Column(db.String, unique=True, nullable=False)
-    _password_hash = db.Column("password_hash", db.LargeBinary, nullable=False)  # store as bytes
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    _password_hash = db.Column(db.String(200), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    cart_items = db.relationship("CartItem", backref="user", lazy=True)
-    orders = db.relationship("Order", backref="user", lazy=True)
-
+    #  Password handling
     @property
     def password(self):
-        raise AttributeError("Password is write-only")
+        raise AttributeError("Password is not a readable attribute")
 
     @password.setter
-    def password(self, plaintext):
-        # bcrypt requires bytes
-        self._password_hash = bcrypt.hashpw(plaintext.encode("utf-8"), bcrypt.gensalt())
+    def password(self, plaintext_password):
+        self._password_hash = bcrypt.generate_password_hash(
+            plaintext_password
+        ).decode("utf-8")
 
-    def check_password(self, plaintext):
-        return bcrypt.checkpw(plaintext.encode("utf-8"), self._password_hash)
+    def check_password(self, plaintext_password):
+        return bcrypt.check_password_hash(self._password_hash, plaintext_password)
 
+    #  Serialize
     def to_dict(self):
         return {
             "id": self.id,
             "username": self.username,
             "email": self.email,
-            "created_at": self.created_at.isoformat()
+            "created_at": self.created_at,
         }
 
 
-# ---------------- PRODUCT ----------------
+# PRODUCT
 class Product(db.Model):
     __tablename__ = "products"
 
@@ -83,7 +80,7 @@ class Product(db.Model):
         }
 
 
-# ---------------- CART ITEM ----------------
+# CART ITEM
 class CartItem(db.Model):
     __tablename__ = "cart_items"
 
@@ -106,7 +103,7 @@ class CartItem(db.Model):
         }
 
 
-# ---------------- ORDER ----------------
+# ORDER 
 class Order(db.Model):
     __tablename__ = "orders"
 
