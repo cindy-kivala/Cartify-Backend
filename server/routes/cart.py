@@ -18,17 +18,31 @@ def get_cart(username):
 # Add to cart
 @cart_bp.route("/", methods=["POST"], strict_slashes=False)
 def add_to_cart():
-    data = request.json
-    user = User.query.filter_by(username=data["username"]).first()
-    product = Product.query.get(data["product_id"])
-    if not user or not product:
-        return jsonify({"error": "Invalid user or product"}), 404
+    data = request.get_json()  # safer than request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
 
+    username = data.get("username")
+    product_id = data.get("product_id")
+    quantity = data.get("quantity", 1)
+
+    if not username or not product_id:
+        return jsonify({"error": "Missing username or product_id"}), 400
+
+    user = User.query.filter_by(username=username).first()
+    product = Product.query.get(product_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    if not product:
+        return jsonify({"error": "Product not found"}), 404
+
+    # Check if item already in cart
     cart_item = CartItem.query.filter_by(user_id=user.id, product_id=product.id).first()
     if cart_item:
-        cart_item.quantity += data.get("quantity", 1)
+        cart_item.quantity += quantity
     else:
-        cart_item = CartItem(user_id=user.id, product_id=product.id, quantity=data.get("quantity", 1))
+        cart_item = CartItem(user_id=user.id, product_id=product.id, quantity=quantity)
         db.session.add(cart_item)
 
     db.session.commit()
