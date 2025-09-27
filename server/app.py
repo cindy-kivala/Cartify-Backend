@@ -47,11 +47,11 @@ def create_app():
     )
 
     # Register blueprints
-    app.register_blueprint(auth_bp, url_prefix="/auth")
-    app.register_blueprint(cart_bp, url_prefix="/cart")
-    app.register_blueprint(products_bp, url_prefix="/products")
-    app.register_blueprint(orders_bp, url_prefix="/orders")
-    app.register_blueprint(users_bp, url_prefix="/users")
+    app.register_blueprint(auth_bp, url_prefix="/auth", strict_slashes=False)
+    app.register_blueprint(cart_bp, url_prefix="/cart", strict_slashes=False)
+    app.register_blueprint(products_bp, url_prefix="/products", strict_slashes=False)
+    app.register_blueprint(orders_bp, url_prefix="/orders", strict_slashes=False)
+    app.register_blueprint(users_bp, url_prefix="/users", strict_slashes=False)
 
     # Root endpoint
     @app.route("/")
