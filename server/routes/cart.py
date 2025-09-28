@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from ..extensions import db
-from ..models import CartItem, Product, User
+from ..models import CartItem, Product, User, Order, OrderItem
 
 cart_bp = Blueprint("cart", __name__, url_prefix="/cart")
 
