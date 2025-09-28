@@ -116,6 +116,8 @@ def delete_cart_item(item_id):
         return jsonify({"error": str(e)}), 500
 
 # Checkout
+# Update your server/routes/cart.py checkout function:
+
 @cart_bp.route("/checkout/<int:user_id>", methods=["POST"])
 def checkout(user_id):
     try:
@@ -127,13 +129,30 @@ def checkout(user_id):
         if not cart_items:
             return jsonify({"error": "Cart is empty"}), 400
             
-        # Clear cart after successful checkout
+        # CREATE THE ORDER FIRST
+        order = Order(user_id=user.id)
+        db.session.add(order)
+        db.session.flush()  # Get order.id before committing
+        
+        # CREATE ORDER ITEMS from cart items
+        for cart_item in cart_items:
+            order_item = OrderItem(
+                order_id=order.id,
+                product_id=cart_item.product_id,
+                quantity=cart_item.quantity
+            )
+            db.session.add(order_item)
+        
+        # Now clear the cart
         CartItem.query.filter_by(user_id=user.id).delete()
         db.session.commit()
         
-        return jsonify({"message": "Checkout successful"})
+        return jsonify({
+            "message": "Checkout successful",
+            "order_id": order.id,
+            "total": order.total
+        })
     except Exception as e:
+        print(f"Checkout error: {str(e)}")
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
-
